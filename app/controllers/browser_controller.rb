@@ -10,10 +10,20 @@ class BrowserController < ApplicationController
 		sse = Reloader::SSE.new(response.stream)
 
 		begin
-			loop do 
-				sse.write({:time => Time.now})
-				sleep 1
-			end  
+			directories = [
+				File.join(Rails.root, 'app', 'assets'),
+				File.join(Rails.root, 'app', 'views'),
+			]
+			fsevent = FSEvent.new
+
+			#watch the directories stated above
+			fsevent.watch(directories) do |dirs|
+				# Send a message on the 'refresh' channel on every update
+				sse.write({:dirs => dirs}, :event => 'refresh')
+			end
+			fsevent.run
+
+
 		rescue IOError #when the client dissconnect, this will send and IOError with the write
 
 		ensure 
@@ -21,8 +31,5 @@ class BrowserController < ApplicationController
 		end 
 	end 
 
-	# def index
-	# 	response.headers['Content-Type'] = 'text/event-stream'
-	# 	fail
-	# end 
+	
 end
